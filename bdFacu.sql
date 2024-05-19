@@ -115,5 +115,22 @@ select cod_pedido, razonSocial from pedido join cliente on cliente = cod_cliente
 -- 2
 select pedido.*, descripcion from pedido join detallePedido on detallePedido.cod_pedido = pedido.cod_pedido join articulo on cod_articulo = cod_art;
 -- 3
-select sum(precio*cantidad)*1.21 precioConIva from detallePedido join articulo on cod_articulo = cod_art group by cod_pedido;
--- 4
+select cod_pedido, sum(precio*cantidad)*1.21 precioConIva from detallePedido join articulo on cod_articulo = cod_art group by cod_pedido;
+-- 4 Listar los datos de los artículos que se encuentren a menos de un 10% de su punto de reorden.
+select distinct(cod_art), articulo.* from articulo join articuloDeposito on cod_articulo = cod_art where stockActual < puntoReorden*1.1;
+-- 5
+select distinct (apellido) from emp;
+-- 6 
+select cod_cliente from cliente where razonSocial like "M%";
+-- 7
+select * from emp where apellido = "Perez";
+-- 8 Recuperar los números de los pedidos que compraron el artículo, 2, 4, 6,8 ó 10 ( AR)
+select cod_pedido from detallePedido where cod_articulo in (2,4, 6, 8, 10);
+-- 9
+select * from articulo where precio between 20000 and 50000;
+-- 10
+select * from pedido where fechaEntrega = adddate(now(), interval 1 week);
+-- 11
+select * from pedido where cliente is null;
+-- 12 Recuperar los artículos cuya primera letra sea una R o una T y que luego continúan con S500. NO ANDA
+select * from articulo where descripcion like '[RT]S500' ;
