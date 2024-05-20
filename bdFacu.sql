@@ -132,5 +132,72 @@ select * from articulo where precio between 20000 and 50000;
 select * from pedido where fechaEntrega = adddate(now(), interval 1 week);
 -- 11
 select * from pedido where cliente is null;
--- 12 Recuperar los artículos cuya primera letra sea una R o una T y que luego continúan con S500. NO ANDA
+-- 12 Recuperar los artículos cuya primera letra sea una R o una T y que luego continúan con S500. anda pero no con mysql
 select * from articulo where descripcion like '[RT]S500' ;
+-- 13 Recuperar los nombres de los diferentes artículos que tienen pedidos. ( AR)
+select descripcion from articulo where cod_art in  (select distinct(cod_articulo) from detallePedido);
+-- 14 Recuperar los artículos que nunca fueron pedidos. ( AR)
+select descripcion from articulo where cod_art not in  (select distinct(cod_articulo) from detallePedido);
+-- 15 Recuperar el nombre de los empleados que no efectuaron ningún pedido esta semana. (AR)
+select nombre from emp where cod_empleado not in (select empleado from pedido where fechaEntrega = adddate(now(), interval 1 week));
+-- 16 Crear una tabla con nuevos pedidos. Listar los pedidos “viejos” y los nuevos
+create table pedidosNuevos (
+	cod_pedido int primary key,
+    cliente int, 
+    empleado int, 
+    fechaEntrega date,
+    fechaReal date,
+    depositoEntrega int,
+    foreign key (cod_pedido) references cliente(cod_cliente),
+    foreign key (empleado) references emp(cod_empleado),
+    foreign key (depositoEntrega) references deposito(cod_deposito)
+);
+(select * from pedido) union (select * from pedidosNuevos);
+-- 17 Listar todos los pedidos de la tabla anterior ordenados por fecha de entrega decreciente
+select * from pedido order by fechaEntrega desc;
+-- 18 Recuperar el total de sueldos y el promedio de sueldos para cada departamento.
+select sum(sueldBasico), avg(sueldBasico),codDepto from emp group by codDepto;
+-- 19 Recuperar el costo total de cada pedido.
+select sum(precio*cantidad) from detallePedido join articulo on cod_art = cod_articulo group by cod_pedido;
+-- 20 Recuperar el total de unidades de cada artículo que hay que entregar la próxima semana.
+select cod_articulo, sum(cantidad) from detallePedido join pedido on pedido.cod_pedido = detallePedido.cod_pedido where fechaEntrega = adddate(now(), interval 1 week) 
+group by cod_articulo;
+-- 21 Recuperar los datos de los empleados que tienen más de 3 pedidos pendientes de entrega
+select * from emp where exists (select count(*) from pedido where fechaReal is null and empleado = emp.cod_empleado group by empleado having count(*) >= 3);
+-- 22 Recuperar la cantidad de pedidos para cada empleado indicando el código y el nombre del mismo.
+select count(*), empleado, nombre from pedido join emp on emp.cod_empleado = pedido.empleado group by empleado, nombre;
+-- 23 Recuperar la cantidad pedida pendiente de entrega para cada artículo.
+select cod_articulo, sum(cantidad) from detallePedido join pedido on pedido.cod_pedido = detallePedido.cod_pedido where fechaReal is null 
+group by cod_articulo;
+-- 24 Recuperar los departamentos para los cuales el promedio de sueldo de sus empleados sea superior a 3000.
+select depa.* from depa join emp on depa.cod_depa = codDepto group by codDepto having avg(sueldBasico)>3000;
+-- 25 Recuperar los artículos para los cuales la cantidad pendiente de entrega supere el stock. Los pedidos pendientes de entrega son los que no tienen informado el campo
+-- fecha_real_entrega. no esta probado.
+select distinct(articuloDeposito.cod_articulo), sum(cantidad) from articuloDeposito join detallePedido on detallePedido.cod_articulo = articuloDeposito.cod_articulo 
+join pedido on detallePedido.cod_pedido = pedido.cod_pedido where fechaReal is null group by articuloDeposito.cod_articulo;
+-- 28
+update emp set direccion = "Congreso 1111" where cod_empleado = 1;
+-- 30
+delete from emp where codigoPostal = "9999";
+-- 31 Dar de alta 3 artículos del tipo C con todos sus datos y uno del tipo B, indicando para este último un stock de 2126 unidades
+insert into articulo values (55, "Pantuflas", 123, "C"), (56, "Pantuflas Cars", 123, "C"), (57, "Pantuflas Cars", 1243, "C"), (58, "Cuchara", 1243, "B");
+-- 32 Todos los artículos del tipo C pasaron a formar parte del tipo A. Actualizar la tabla con 1 instrucción.
+update articulo set tipo = "C" where tipo = "A";
+-- 33 Restar 268 unidades al stock de los artículos de tipo B
+update articuloDeposito join articulo on articuloDeposito.cod_articulo = articulo.cod_art set stockActual = stockActual - 268 where tipo = "B"; 
+-- 34 Aumentar en un 5,5% el precio de los artículos del grupo A
+update articulo set precio = precio*6.5 where tipo="A";
+-- 35 Disminuir en un 10% el precio de los artículos con el mayor stock.
+update articulo set precio = precio - precio*0.1 where cod_art = (select cod_articulo from articuloDeposito order by stockActual desc limit 1);
+-- 36 Aumentar un 20% el sueldo básico de los empleados con el menor sueldo básico.
+update emp set sueldBasico = sueldBasico + sueldBasico*0.2 order by sueldBasico asc limit 1;
+-- 37 Aumentar un 15% a los empleados con más de 20 años en la empresa.
+update emp set sueldBasico = sueldBasico + sueldBasico*0.15 where timestampdiff(year, fechaIngreso,now()) > 15;
+-- 38 Aumentar en $500,00 el sueldo de los jefes de departamento que tengan el menor sueldo básico
+update emp set sueldBasico = sueldBasico + 500 where jefe is null order by sueldBasico limit 1;
+-- 39 Actualizar el precio de todos los artículos que no tienen pedidos reduciéndolo en un 10%
+update articulo set precio = precio - precio*0.1 where cod_art not in (select distinct(cod_articulo) from detallePedido);
+-- 40 Borrar todos los artículos cuyo stock es 0 y nunca han tenido pedidos.
+delete from articulo where cod_art not in (select cod_articulo from detallePedido) and (select stockActual from articuloDeposito where cod_articulo = cod_art);
+-- 41 Recuperar los artículos cuya descripción tiene al comienzo la sílaba MA y luego continúa con S550 ó S750.
+select * from articulo where descripcion like 'MAS550%' or descripcion like 'MAS570%';
