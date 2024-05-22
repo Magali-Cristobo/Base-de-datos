@@ -204,14 +204,92 @@ select * from articulo where descripcion like 'MAS550%' or descripcion like 'MAS
 -- 42 Listar el sotck de los artículos cuya primera sílaba es ME o TE y luego continúan con R200 o R980
 select stockActual from articulo join articuloDeposito on cod_art = cod_articulo where descripcion like 'ME_R200%' or descripcion like 'ME_R980%' 
 or descripcion like 'TER200%' or descripcion like 'TE_R980%';
--- 43 Recuperar toda la estructura del departamento A ( con todos sus subniveles ). No pude hacer solo del depto A
-select depa.descripcion hijo from depa join depa a on depa.cod_dep_padre = a.cod_depa;
--- 44 Recuperar toda la línea jerárquica que se encuentra sobre el empleado 28.
+-- 43 Recuperar toda la estructura del departamento A ( con todos sus subniveles ). Anda
+WITH RECURSIVE jerarquia AS (
+    -- Caso base: el empleado específico
+    SELECT cod_depa, descripcion, cod_dep_padre FROM depa WHERE cod_depa = 2 
+    UNION ALL
+    -- Parte recursiva: seleccionar el jefe del empleado anterior en la jerarquía
+    SELECT e.cod_depa, e.descripcion, e.cod_dep_padre  FROM depa e INNER JOIN jerarquia j ON e.cod_dep_padre = j.cod_depa
+)
+-- Seleccionar toda la jerarquía
+-- select * from jerarquia;
+SELECT GROUP_CONCAT(distinct(descripcion) order by cod_dep_padre SEPARATOR ' - ') AS linea_jerarquica
+FROM jerarquia;
+
+-- 44 Recuperar toda la línea jerárquica que se encuentra sobre el empleado 28. Anda
+WITH RECURSIVE jerarquia AS (
+    -- Caso base: el empleado específico
+    SELECT cod_empleado, nombre, apellido, jefe FROM emp WHERE cod_empleado = 6 
+    UNION ALL
+    -- Parte recursiva: seleccionar el jefe del empleado anterior en la jerarquía
+    SELECT e.cod_empleado, e.nombre, e.apellido, e.jefe FROM emp e INNER JOIN jerarquia j ON e.cod_empleado = j.jefe
+)
+-- Seleccionar toda la jerarquía
+SELECT GROUP_CONCAT(distinct(nombre) order by jefe SEPARATOR ' - ') AS linea_jerarquica -- lo ordeno para que me muestre ultimo el empleado 28
+FROM jerarquia;
+/*
+WITH RECURSIVE employee_hierarchy AS (
+	SELECT cod_empleado, nombre, apellido, jefe, 'Owner' AS path FROM emp WHERE cod_empleado = 6
+	UNION ALL
+	SELECT e.cod_empleado, e.nombre, e.apellido, e.jefe, concat(employee_hierarchy.path,'->' ,e.apellido) FROM emp e, employee_hierarchy WHERE e.cod_empleado = employee_hierarchy.jefe
+)
+SELECT *
+FROM employee_hierarchy;
+SELECT cod_empleado, nombre, apellido, jefe, 'Owner' AS aa FROM emp WHERE cod_empleado = 6;
 select emp.cod_empleado hijo from emp join emp a on emp.jefe = a.cod_empleado where emp.jefe = 2;
--- 45 Recuperar el nombre de todos los empleados que dependen de XXXX ( en todos los niveles).
-select emp.nombre hijo from emp join emp a on emp.jefe = a.cod_empleado where emp.jefe = 2;
--- 46 
--- 47
+
+WITH RECURSIVE employee_hierarchy (cod_empleado, nombre, apellido, jefe, Level) AS (
+  -- Anchor member
+  SELECT cod_empleado, nombre, apellido, jefe, 1 as Level
+  FROM emp
+  WHERE cod_empleado = 1
+  UNION ALL
+  -- Recursive member
+  SELECT e.cod_empleado, e.nombre, e.apellido, e.jefe, eh.Level +1 
+  FROM emp e
+  INNER JOIN employee_hierarchy eh ON e.jefe = eh.cod_empleado
+)
+SELECT * FROM employee_hierarchy;*/
+
+-- 45 Recuperar el nombre de todos los empleados que dependen de XXXX ( en todos los niveles). Anda
+WITH RECURSIVE jerarquia AS (
+    -- Caso base: el empleado específico
+    SELECT cod_empleado, nombre, apellido, jefe
+    FROM emp
+    WHERE cod_empleado = 1  -- si pongo jefe = 1 no me muestra el nombre de xxxx
+    UNION ALL
+
+    -- Parte recursiva: seleccionar el jefe del empleado anterior en la jerarquía
+    SELECT e.cod_empleado, e.nombre, e.apellido, e.jefe
+    FROM emp e
+    INNER JOIN jerarquia j ON e.jefe = j.cod_empleado
+)
+
+-- Seleccionar toda la jerarquía
+SELECT GROUP_CONCAT(distinct(nombre) ORDER BY jefe SEPARATOR ', ') AS linea_jerarquica
+FROM jerarquia;
+-- 46 Recuperar el árbol que corresponde a la estructura de departamentos de la organización
+WITH RECURSIVE Recursivo AS (
+    SELECT
+        cod_depa, descripcion, cod_dep_padre, descripcion AS ruta FROM depa WHERE cod_dep_padre IS NULL
+    UNION ALL
+    SELECT
+        d.cod_depa, d.descripcion, d.cod_dep_padre, CONCAT(r.ruta, ' - ', d.descripcion) FROM depa d INNER JOIN Recursivo r ON d.cod_dep_padre = r.cod_depa
+)
+-- SELECT descripcion, if(ruta = descripcion, "-", ruta) FROM Recursivo;
+SELECT  if(ruta = descripcion, descripcion, concat(descripcion, " -> " ,ruta)) FROM Recursivo;
+-- 47 Recuperar el árbol que corresponde a la estructura de personal de la organización. Anda pero se puede emprolijar un poco
+WITH RECURSIVE Recursivo AS (
+    SELECT
+        cod_empleado, jefe, nombre, if(jefe is null, "", nombre) AS ruta FROM emp WHERE jefe IS NULL
+    UNION ALL
+    SELECT
+        d.cod_empleado, d.jefe, d.nombre, if(d.jefe is null, "", CONCAT(r.ruta," --- ",  r.nombre)) FROM emp d INNER JOIN Recursivo r ON d.jefe = r.cod_empleado
+)
+select concat(nombre, " -> " ,ruta) from Recursivo;
+-- SELECT descripcion, if(ruta = descripcion, "-", ruta) FROM Recursivo;
+-- SELECT  if(ruta = nombre, nombre, concat(nombre, " -> " ,ruta)) FROM Recursivo;
 -- 48 Recuperar el nombre y el departamento de los empleados de mayor sueldo.
 select cod_depa, descripcion from emp join depa on depa.cod_depa = codDepto group by cod_depa having sum(sueldBasico) = (select max(sueldoDepto) from (select sum(sueldBasico) as sueldoDepto from emp group by codDepto) as a);
 -- verificacion
