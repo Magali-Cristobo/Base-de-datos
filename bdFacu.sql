@@ -139,7 +139,7 @@ select descripcion from articulo where cod_art in  (select distinct(cod_articulo
 -- 14 Recuperar los artículos que nunca fueron pedidos. ( AR)
 select descripcion from articulo where cod_art not in  (select distinct(cod_articulo) from detallePedido);
 -- 15 Recuperar el nombre de los empleados que no efectuaron ningún pedido esta semana. (AR)
-select nombre from emp where cod_empleado not in (select empleado from pedido where fechaEntrega = adddate(now(), interval 1 week));
+select nombre from emp where cod_empleado not in (select empleado from pedido where fechaEntrega >= current_date() and fechaEntrega<= adddate(now(), interval 1 week));
 -- 16 Crear una tabla con nuevos pedidos. Listar los pedidos “viejos” y los nuevos
 create table pedidosNuevos (
 	cod_pedido int primary key,
@@ -201,3 +201,39 @@ update articulo set precio = precio - precio*0.1 where cod_art not in (select di
 delete from articulo where cod_art not in (select cod_articulo from detallePedido) and (select stockActual from articuloDeposito where cod_articulo = cod_art);
 -- 41 Recuperar los artículos cuya descripción tiene al comienzo la sílaba MA y luego continúa con S550 ó S750.
 select * from articulo where descripcion like 'MAS550%' or descripcion like 'MAS570%';
+-- 42 Listar el sotck de los artículos cuya primera sílaba es ME o TE y luego continúan con R200 o R980
+select stockActual from articulo join articuloDeposito on cod_art = cod_articulo where descripcion like 'ME_R200%' or descripcion like 'ME_R980%' 
+or descripcion like 'TER200%' or descripcion like 'TE_R980%';
+-- 43 Recuperar toda la estructura del departamento A ( con todos sus subniveles ). No pude hacer solo del depto A
+select depa.descripcion hijo from depa join depa a on depa.cod_dep_padre = a.cod_depa;
+-- 44 Recuperar toda la línea jerárquica que se encuentra sobre el empleado 28.
+select emp.cod_empleado hijo from emp join emp a on emp.jefe = a.cod_empleado where emp.jefe = 2;
+-- 45 Recuperar el nombre de todos los empleados que dependen de XXXX ( en todos los niveles).
+select emp.nombre hijo from emp join emp a on emp.jefe = a.cod_empleado where emp.jefe = 2;
+-- 46 
+-- 47
+-- 48 Recuperar el nombre y el departamento de los empleados de mayor sueldo.
+select cod_depa, descripcion from emp join depa on depa.cod_depa = codDepto group by cod_depa having sum(sueldBasico) = (select max(sueldoDepto) from (select sum(sueldBasico) as sueldoDepto from emp group by codDepto) as a);
+-- verificacion
+select sum(sueldBasico), codDepto from emp group by codDepto;
+-- 49 Recuperar el nombre y el departamento de los empleados de mayor sueldo y de los de menor sueldo indicando en una columna la condición de mayor o de menor según corresponda.
+select cod_depa, descripcion, "Mayor" as condicion from emp join depa on depa.cod_depa = codDepto group by cod_depa having sum(sueldBasico) = (select max(sueldoDepto) from 
+(select sum(sueldBasico) as sueldoDepto from emp group by codDepto) as a) union (select cod_depa, descripcion,"Menor" from emp join depa on depa.cod_depa = codDepto 
+group by cod_depa having sum(sueldBasico) = (select min(sueldoDepto) from 
+(select sum(sueldBasico) as sueldoDepto from emp group by codDepto) as a) );
+-- otra forma buscando los empleados con mayor y menor sueldo
+select codDepto,descripcion, "Mayor" as condicion from emp join depa on cod_depa = codDepto where sueldBasico = (select max(sueldBasico) from emp) union 
+(select codDepto, descripcion, "Menor" as condicion from emp join depa on cod_depa = codDepto where sueldBasico = (select min(sueldBasico) from emp));
+-- 50 Obtener el departamento de los empleados que cobran, al menos, el doble que el sueldo promedio de los empleados.
+select distinct(codDepto) from emp where sueldBasico >= 2*(select avg(sueldBasico) from emp);
+-- 51 Listar los empleados que no son jefes de departamento y tienen sueldo mayor que el sueldo más alto de los jefes
+select * from emp where jefe is not null and sueldBasico > (select max(sueldBasico) from emp where jefe is null);
+-- 52
+insert into pedido (cod_pedido, cliente, empleado, fechaEntrega, fechaReal, depositoEntrega) select 24, cliente, empleado, fechaEntrega, fechaReal, 
+depositoEntrega  from pedido where cod_pedido = 13;
+-- 53 Listar los números de pedido que vendieron el artículo 23 y el 54. Resolver este ejercicio de 3 formas diferentes. ( AR)
+select cod_pedido from detallePedido where cod_articulo = 23 or cod_articulo = 54 group by cod_pedido having count(*)=2;
+-- con exists y in
+select cod_pedido from detallePedido where cod_articulo = 23 or cod_articulo = 54 group by cod_pedido having count(*)=2;
+
+select cod_articulo from detallePedido order by;
