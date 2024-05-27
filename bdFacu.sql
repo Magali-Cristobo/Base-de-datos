@@ -194,11 +194,11 @@ update emp set sueldBasico = sueldBasico + sueldBasico*0.2 order by sueldBasico 
 -- 37 Aumentar un 15% a los empleados con más de 20 años en la empresa.
 update emp set sueldBasico = sueldBasico + sueldBasico*0.15 where timestampdiff(year, fechaIngreso,now()) > 15;
 -- 38 Aumentar en $500,00 el sueldo de los jefes de departamento que tengan el menor sueldo básico
-update emp set sueldBasico = sueldBasico + 500 where jefe is null order by sueldBasico limit 1;
+update emp a set sueldBasico = sueldBasico + 500 where jefe is null and sueldBasico = (select min(sueldo) from (select sueldBasico as sueldo from emp) as a);
 -- 39 Actualizar el precio de todos los artículos que no tienen pedidos reduciéndolo en un 10%
 update articulo set precio = precio - precio*0.1 where cod_art not in (select distinct(cod_articulo) from detallePedido);
 -- 40 Borrar todos los artículos cuyo stock es 0 y nunca han tenido pedidos.
-delete from articulo where cod_art not in (select cod_articulo from detallePedido) and (select stockActual from articuloDeposito where cod_articulo = cod_art);
+delete from articulo where cod_art not in (select cod_articulo from detallePedido) and (select if(sum(stockActual) is null, 0, sum(stockActual)) from articuloDeposito where cod_articulo = cod_art)=0;
 -- 41 Recuperar los artículos cuya descripción tiene al comienzo la sílaba MA y luego continúa con S550 ó S750.
 select * from articulo where descripcion like 'MAS550%' or descripcion like 'MAS570%';
 -- 42 Listar el sotck de los artículos cuya primera sílaba es ME o TE y luego continúan con R200 o R980
@@ -311,7 +311,146 @@ insert into pedido (cod_pedido, cliente, empleado, fechaEntrega, fechaReal, depo
 depositoEntrega  from pedido where cod_pedido = 13;
 -- 53 Listar los números de pedido que vendieron el artículo 23 y el 54. Resolver este ejercicio de 3 formas diferentes. ( AR)
 select cod_pedido from detallePedido where cod_articulo = 23 or cod_articulo = 54 group by cod_pedido having count(*)=2;
--- con exists y in
-select cod_pedido from detallePedido where cod_articulo = 23 or cod_articulo = 54 group by cod_pedido having count(*)=2;
+select cod_pedido from pedido where exists (select * from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido and cod_articulo = 23) and
+exists (select * from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido and cod_articulo = 54);
+select cod_pedido from pedido where 23 in (select cod_articulo from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido) and 54 in 
+(select cod_articulo from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido);
+-- 54 Listar los números de pedido que vendieron el artículo 23 o el 54. Resolver este ejercicio de 3 formas diferentes. ( AR)
+select cod_pedido from detallePedido where cod_articulo = 23 or cod_articulo = 54 group by cod_pedido having count(*)>=1 order by cod_pedido;
+select cod_pedido from pedido where exists (select * from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido and cod_articulo = 23) or
+exists (select * from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido and cod_articulo = 54) order by cod_pedido;
+select cod_pedido from pedido where 23 in (select cod_articulo from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido) or 54 in 
+(select cod_articulo from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido);
+-- 55  Listar los números de pedido que vendieron el artículo 23, pero no el 54. Resolver este ejercicio de 3 formas diferentes. ( AR)
+select cod_pedido from pedido where exists (select * from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido and cod_articulo = 23) and not
+exists (select * from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido and cod_articulo = 54) order by cod_pedido;
+select cod_pedido from pedido where 23 in (select cod_articulo from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido) and 54 not in 
+(select cod_articulo from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido);
+-- 56 Repetir los 3 ejercicios anteriores, pero ahora recuperar los nombres de los empleados en cada una de esas situaciones.
+select cod_pedido, nombre from pedido join emp on empleado = cod_empleado where exists (select * from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido and cod_articulo = 23) and not
+exists (select * from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido and cod_articulo = 54) order by cod_pedido;
+-- 57 Indicar para cada artículo su nombre, la cantidad total pendiente de entrega y la cantidad total en depósito.
+(select descripcion, sum(cantidad) from articulo join detallePedido on cod_articulo = cod_art join pedido on detallePedido.cod_pedido = pedido.cod_pedido
+where fechaReal is null group by cod_art) union (select descripcion, sum(stockActual) from articulo join articuloDeposito on cod_articulo = cod_art group by cod_art);
+-- 58 Indicar el nombre de los artículos que tienen stock en todos los depósitos.
+select descripcion from articuloDeposito join articulo on cod_articulo = cod_art where stockActual > 0 group by cod_art having count(*) = (select count(*) from deposito);
+-- 59 Informar el sueldo actual de los empleados y junto con el sueldo incrementado en $500 para los empleados del departamento de Investigacion y desarrollo
+select sueldBasico, sueldBasico+500 as sueldoIncrementado from emp join depa on codDepto = cod_depa where descripcion = "Investigacion y desarrollo";
+-- 60 Informar el precio actual de los articulos con stock menor a 50 unidades y el precio con un descuento del 15%. No hay descuento
+select precio from articulo join articuloDeposito on cod_articulo = cod_art group by cod_art having sum(stockActual) < 50;
+-- 61 Informar todos los articulos con el precio menor o igual al precio del articulo 121.
+select descripcion from articulo where precio < (select precio from articulo where cod_art = 121);
+-- 62 Informar todos los articulos con los detalles de pedidos para todos independientemente que no tengan y cuya cantidad del pedido sea menor a 2
+select distinct(descripcion),precio, tipo, cod_art from articulo left join detallePedido on cod_art = cod_articulo where cod_articulo is null or cantidad < 2;
+-- 63 Obtener el monto total de sueldos por departamento.
+select sum(sueldBasico), descripcion from emp join depa on codDepto = cod_depa group by codDepto;
+-- 64 Informar los artículos con el menor precio
+select descripcion from articulo where precio = (select min(precio) from articulo);
+-- 65 Informar todos los empleados que no tienen jefe
+select * from emp where jefe is null;
+-- 66 Informar todos los departamentos que no tienen empleados
+select descripcion from depa left join emp on cod_depa = codDepto where cod_empleado is null;
 
-select cod_articulo from detallePedido order by;
+-- Practica triggers
+/*CREATE TRIGGER trgInsertoPago
+AFTER INSERT ON PAGO
+AS
+BEGIN
+	INSERT AUD_PAGO(nro_pago, nro_factura, monto, usuario, fecha, operacion)
+    VALUES (PAGO.nro_pago, PAGO.nro_factura, PAGO.monto, SUSER_SNAME(), GETDATE(), 'Inserción')
+END*/
+create table factura (
+	nrofactura int primary key,
+    cliente varchar(100),
+    monto numeric (10,3), 
+    saldo numeric (10,3)
+);
+
+create table pago (
+	nropago int primary key,
+    nrofactura int, 
+    monto numeric(10,3),
+    foreign key (nrofactura) references factura(nrofactura)
+);
+
+-- 1 Crear un stored procedure para insertar en la tabla facturas y en la de pagos.
+delimiter //
+create procedure insertarFactura (in cliente varchar(45), in monto numeric(10,3), in saldo numeric(10,3))
+begin
+insert into factura value((select max(nrofactura) from factura)+1, cliente, monto, saldo);
+end//
+delimiter ;
+delimiter //
+create procedure insertarPago (in factura int, in monto numeric(10,3))
+begin
+insert into pago value((select max(nropago) from pago)+1, factura, monto);
+end//
+delimiter ;
+-- 2 Crear un trigger sobre la tabla pagos que cuando se carga un pago sobre una factura actualice el saldo de la misma y controle que el monto pagado no exceda el 
+-- saldo pendiente de pago.
+delimiter //
+create trigger afterInsertPago after insert on pago
+for each row
+begin
+update factura set saldo = saldo + new.monto where nrofactura = new.nrofactura and monto <= saldo + new.monto;
+end//
+delimiter ;
+-- 3 
+create table aud_factura (
+	codigo int primary key auto_increment,
+    nrofactura int, 
+	cliente varchar(45),
+    monto numeric(10,3),
+    saldo numeric(10,3),
+	usuario varchar (45),
+	operacion varchar(45),
+	fecha date
+);
+-- 4
+create table aud_pagos (
+	codigo int primary key auto_increment,
+	nropago int,
+    nrofactura int, 
+    monto numeric(10,3),
+	usuario varchar (45),
+	operacion varchar(45),
+	fecha date
+);
+ -- 5 Crear los triggers necesarios para que se carguen dichas tablas cuando se producen las distintas operaciones.
+delimiter //
+CREATE TRIGGER trgInsertonPago AFTER INSERT ON pago
+for each row
+BEGIN
+	INSERT aud_pagos(nropago, nrofactura, monto, usuario, fecha, operacion)
+    VALUES (null, new.nropago, new.nrofactura, new.monto, SUSER_SNAME(), GETDATE(), 'Inserción');
+END//
+CREATE TRIGGER trgUpdatePago AFTER update ON pago
+for each row
+BEGIN
+	INSERT aud_pagos(nropago, nrofactura, monto, usuario, fecha, operacion)
+    VALUES (null, new.nropago, new.nrofactura, new.monto, SUSER_SNAME(), GETDATE(), 'Modificación');
+END//
+CREATE TRIGGER trgUpdatePago AFTER delete ON pago
+for each row
+BEGIN
+	INSERT aud_pagos(nropago, nrofactura, monto, usuario, fecha, operacion)
+    VALUES (null, old.nropago, old.nrofactura, old.monto, SUSER_SNAME(), GETDATE(), 'Eliminación');
+END//
+CREATE TRIGGER trgInsertFactura AFTER insert ON factura
+for each row
+BEGIN
+	INSERT aud_factura VALUES (null, new.nrofactura, new.cliente, new.monto, new.saldo, SUSER_SNAME(), GETDATE(), 'Inserción');
+END//
+CREATE TRIGGER trgUpdateFactura AFTER update ON factura
+for each row
+BEGIN
+	INSERT aud_factura VALUES (null, new.nrofactura, new.cliente, new.monto, new.saldo, SUSER_SNAME(), GETDATE(), 'Modificación');
+END//
+CREATE TRIGGER trgDeleteFactura AFTER delete ON factura
+for each row
+BEGIN
+	INSERT aud_factura VALUES (null, old.nrofactura, old.cliente, old.monto, old.saldo, SUSER_SNAME(), GETDATE(), 'Eliminación');
+END//
+delimiter ;
+-- 7 Crear un stored procedure que reciba como parámetro el nombre de una tabla y devuelva las primary y foreign key sobre la misma
+-- 8 Crear un stored procedure que dada una tabla devuelva todas las tablas que tienen definida una foreign - key hacia ella

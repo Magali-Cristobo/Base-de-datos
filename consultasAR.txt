@@ -1,0 +1,41 @@
+-- 1
+π Nro_pedido,Razon_Social(σ Fecha_pactada_entrega < date('2024-05-23') (
+(PED) ⨝ PED.Cod_Cliente = CLI.Cod_Cliente (CLI)
+))
+-- 8
+
+
+-- 1 Obtenga los números de pedidos cuya fecha pactada de entrega fue el día 20/04/2024 
+π Nro_pedido(σ Fecha_pactada_entrega < date('2024-04-20') (
+(PED) ⨝ PED.Cod_Cliente = CLI.Cod_Cliente (CLI)
+))
+-- 2 Obtenga los nombres de los clientes cuyos pedidos fueron realmente entregados entre el 23/04/2024 y 27/04/2024 (ambos días incluidos). 
+πRazon_Social(σ Fecha_pactada_entrega>=date('2024-04-23') ∧ Fecha_pactada_entrega<=date('2024-04-27') ((PED) ⨝ PED.Cod_Cliente = CLI.Cod_Cliente (CLI)))
+-- 3 Recuperar los números de los pedidos que compraron el artículo 2, 4, 6, 8 ó 10.
+-- a Resuelva usando UNION
+π Nro_pedido (σ Cod_articulo = 2 (DET) ∪ σ Cod_articulo = 4 (DET) ∪ σ Cod_articulo = 8 (DET) ∪ σ Cod_articulo = 6 (DET) ∪ σ Cod_articulo = 10 (DET))
+-- b Resuelva usando o
+π Nro_pedido (σ Cod_articulo = 2 ∨ Cod_articulo = 4 ∨ Cod_articulo = 6 ∨ Cod_articulo = 8 ∨ Cod_articulo = 10 (DET))
+
+-- 4 Recuperar los nombres de los diferentes artículos que tienen pedidos.
+πDescripcion ((ART) ⨝ ART.Cod_Articulo = DET.Cod_articulo (DET))
+
+-- 5 Recuperar los numeros de artículos que nunca fueron pedidos.
+-- Use LEFT OUTER JOIN
+ π Cod_Articulo(σ Nro_pedido = null ((ART) ⟕ ART.Cod_Articulo = DET.Cod_articulo (DET)))
+--  Use diferencia de conjuntos
+pi Cod_Articulo (ART) - π Cod_articulo (DET)
+
+-- 6  Recuperar el nombre de los empleados que no efectuaron ningún pedido esta semana.
+pi Nombre (EMP) - pi Nombre(sigma Fecha_real_entrega >= date('2024-05-20') ∧ Fecha_real_entrega <= date('2024-05-27') ((EMP) ⨝ EMP.Cod_Empleado = PED.Cod_Empleado (PED)))
+
+-- 7  Listar los números de pedido que vendieron el artículo 23 y el 54.  Resolver este ejercicio de 2 formas distintas una usando Intersección y otra usando Join.
+π Nro_pedido (σ Cod_articulo = 23(DET)) ∩ π Nro_pedido (σ Cod_articulo = 54 (DET))
+-- join?
+
+-- 8 Listar los números de pedido que vendieron el artículo 23 o el 54. Resolver este ejercicio de 2 formas diferentes.
+π Nro_pedido (σ Cod_articulo = 23 ∨ Cod_articulo = 54 (DET))
+
+-- 9 Listar los números de pedido que vendieron el artículo 23, pero no el 54. Resolver este ejercicio de 2 formas diferentes.
+π Nro_pedido (σ Cod_articulo = 23 (DET)) - π Nro_pedido (σ Cod_articulo = 54 (DET))
+
