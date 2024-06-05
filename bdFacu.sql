@@ -457,6 +457,7 @@ BEGIN
 	INSERT aud_factura VALUES (null, old.nrofactura, old.cliente, old.monto, old.saldo, SUSER_SNAME(), GETDATE(), 'Eliminación');
 END//
 delimiter ;
+
 -- 7 Crear un stored procedure que reciba como parámetro el nombre de una tabla y devuelva las primary y foreign key sobre la misma
 delimiter //
 create procedure devolverPrimariasForaneas (in nombreTabla varchar(45))
@@ -471,3 +472,11 @@ delimiter ;
 call devolverPrimariasForaneas ("emp");
 
 -- 8 Crear un stored procedure que dada una tabla devuelva todas las tablas que tienen definida una foreign - key hacia ella
+delimiter //
+create procedure devolverTablas (in nombreTabla varchar(45))
+begin
+SELECT t.TABLE_NAME FROM information_schema.table_constraints t JOIN information_schema.key_column_usage k ON t.constraint_name = k.constraint_name 
+AND t.table_schema = k.table_schema AND t.table_name = k.table_name WHERE k.REFERENCED_TABLE_NAME = nombreTabla AND t.table_schema = DATABASE();
+end//
+delimiter ;
+
