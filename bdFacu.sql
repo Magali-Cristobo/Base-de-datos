@@ -315,12 +315,17 @@ select cod_pedido from pedido where exists (select * from detallePedido where de
 exists (select * from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido and cod_articulo = 54);
 select cod_pedido from pedido where 23 in (select cod_articulo from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido) and 54 in 
 (select cod_articulo from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido);
+select distinct(b.cod_pedido)from detallePedido a join detallePedido b on b.cod_pedido = a.cod_pedido where 
+a.cod_articulo = 54 and b.cod_articulo = 23;
+
 -- 54 Listar los números de pedido que vendieron el artículo 23 o el 54. Resolver este ejercicio de 3 formas diferentes. ( AR)
 select cod_pedido from detallePedido where cod_articulo = 23 or cod_articulo = 54 group by cod_pedido having count(*)>=1 order by cod_pedido;
 select cod_pedido from pedido where exists (select * from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido and cod_articulo = 23) or
 exists (select * from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido and cod_articulo = 54) order by cod_pedido;
 select cod_pedido from pedido where 23 in (select cod_articulo from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido) or 54 in 
 (select cod_articulo from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido);
+select distinct(b.cod_pedido)from detallePedido a join detallePedido b on b.cod_pedido = a.cod_pedido where 
+a.cod_articulo = 54 or b.cod_articulo = 23;
 -- 55  Listar los números de pedido que vendieron el artículo 23, pero no el 54. Resolver este ejercicio de 3 formas diferentes. ( AR)
 select cod_pedido from pedido where exists (select * from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido and cod_articulo = 23) and not
 exists (select * from detallePedido where detallePedido.cod_pedido = pedido.cod_pedido and cod_articulo = 54) order by cod_pedido;
@@ -453,4 +458,16 @@ BEGIN
 END//
 delimiter ;
 -- 7 Crear un stored procedure que reciba como parámetro el nombre de una tabla y devuelva las primary y foreign key sobre la misma
+delimiter //
+create procedure devolverPrimariasForaneas (in nombreTabla varchar(45))
+begin
+(SELECT 'Primaria' AS tipo, k.COLUMN_NAME AS nombre FROM information_schema.table_constraints t JOIN information_schema.key_column_usage k 
+ON t.constraint_name = k.constraint_name AND t.table_schema = k.table_schema AND t.table_name = k.table_name WHERE t.CONSTRAINT_NAME = "PRIMARY"
+AND t.table_name = nombreTabla AND t.table_schema = DATABASE()) union (SELECT 'Foranea' AS tipo, k.COLUMN_NAME AS nombre FROM information_schema.table_constraints t
+JOIN information_schema.key_column_usage k ON t.constraint_name = k.constraint_name AND t.table_schema = k.table_schema AND t.table_name = k.table_name
+WHERE t.CONSTRAINT_NAME != "PRIMARY" AND t.table_name = nombreTabla AND t.table_schema = DATABASE());
+end//
+delimiter ;
+call devolverPrimariasForaneas ("emp");
+
 -- 8 Crear un stored procedure que dada una tabla devuelva todas las tablas que tienen definida una foreign - key hacia ella
