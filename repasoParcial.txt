@@ -1,0 +1,4 @@
+-- Recupere los números de las internaciones y los nombres de los pacientes que ingresaron ayer.
+π numero, nombre(σ fechaIngreso = "2024-06-16" ((INTERNACIONES) ⨝ pacienteId = PACIENTES.id (PACIENTES))
+-- 2 Recupere los números de las internaciones que usaron los medicamentos con alguno de los siguientes códigos A2, S4, D6, F3
+π INTERNACIONES.numero (σ MEDICAMENTOS.codigo = 'A2' ∨ MEDICAMENTOS.codigo = 'S4' ∨ MEDICAMENTOS.codigo = 'D6' ∨ MEDICAMENTOS.codigo = 'F3' (((MEDICAMENTOINTERNACION) ⨝ internacionId  = INTERNACIONES.id (INTERNACIONES)) ⨝ medicamentoId = MEDICAMENTOS.id (MEDICAMENTOS)))
